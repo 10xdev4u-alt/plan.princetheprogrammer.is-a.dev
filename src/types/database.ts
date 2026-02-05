@@ -33,8 +33,8 @@ export type Project = {
     idea_id: string;
     name: string;
     slug: string;
-    github_url: string | null;
-    live_url: string | null;
+    github_url: string | null; // Explicitly nullable for GitHub integration
+    live_url: string | null;   // Explicitly nullable for Live URL tracking
     status: 'active' | 'paused' | 'completed' | 'abandoned';
     user_id: string;
     created_at: string;
