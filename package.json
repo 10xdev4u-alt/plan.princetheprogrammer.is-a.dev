@@ -5,6 +5,7 @@
   // Environment Variables for Telegram Bot Integration:
   // TELEGRAM_BOT_TOKEN="YOUR_TELEGRAM_BOT_API_TOKEN"
   // SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
+  // TELEGRAM_DEFAULT_USER_ID="YOUR_SUPABASE_USER_ID_FOR_TELEGRAM_IDEAS"
   "scripts": {
     "dev": "next dev",
     "build": "next build",
