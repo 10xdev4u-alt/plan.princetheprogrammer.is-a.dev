@@ -4,23 +4,28 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle, Timer } from 'lucide-react'; // Added Timer icon
+import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle, Timer } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Project } from '@/types/database';
+import { Project, TimeLog } from '@/types/database'; // Import TimeLog
 import { EditProjectModal } from '@/components/edit-project-modal';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import { LogTimeModal } from '@/components/log-time-modal'; // New import for modal
+import { LogTimeModal } from '@/components/log-time-modal';
+import { formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'; // Import date-fns utilities
 
+
+interface ProjectWithTime extends Project { // Extend Project type to include total time
+  total_time_minutes: number;
+}
 
 export default function ProjectsPage() {
   const supabase = createClient();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectWithTime[]>([]); // Use extended type
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-  const [showLogTimeModal, setShowLogTimeModal] = useState(false); // New state for log time modal
-  const [loggingProject, setLoggingProject] = useState<Project | null>(null); // New state for project to log time for
+  const [showLogTimeModal, setShowLogTimeModal] = useState(false);
+  const [loggingProject, setLoggingProject] = useState<Project | null>(null);
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -30,18 +35,49 @@ export default function ProjectsPage() {
       return;
     }
 
-    const { data, error } = await supabase
+    const { data: fetchedProjects, error: projectsError } = await supabase
       .from('projects')
       .select('*')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching projects:', error);
+    if (projectsError) {
+      console.error('Error fetching projects:', projectsError);
       toast.error('Failed to load projects.');
-    } else {
-      setProjects(data || []);
+      setLoading(false);
+      return;
     }
+
+    const { data: timeLogs, error: timeLogsError } = await supabase
+        .from('time_logs')
+        .select('*')
+        .eq('user_id', session.user.id);
+
+    if (timeLogsError) {
+        console.error('Error fetching time logs:', timeLogsError);
+        toast.error('Failed to load time logs.');
+        setLoading(false);
+        return;
+    }
+
+    // Calculate total time for each project
+    const projectsWithTime: ProjectWithTime[] = fetchedProjects.map(project => {
+        let totalTimeMinutes = 0;
+        const projectTimeLogs = timeLogs.filter(log => log.project_id === project.id);
+
+        projectTimeLogs.forEach(log => {
+            const start = new Date(log.start_time);
+            const end = log.end_time ? new Date(log.end_time) : new Date(); // If ongoing, use current time
+
+            if (start && end) {
+                totalTimeMinutes += differenceInMinutes(end, start);
+            }
+        });
+
+        return { ...project, total_time_minutes: totalTimeMinutes };
+    });
+
+    setProjects(projectsWithTime || []);
     setLoading(false);
   }, [supabase]);
 
@@ -54,7 +90,7 @@ export default function ProjectsPage() {
     setShowEditModal(true);
   };
 
-  const handleLogTimeClick = (project: Project) => { // New handler for log time button
+  const handleLogTimeClick = (project: Project) => {
     setLoggingProject(project);
     setShowLogTimeModal(true);
   };
@@ -65,7 +101,7 @@ export default function ProjectsPage() {
     setEditingProject(null);
   };
 
-  const handleTimeLogged = () => { // New handler for time logged
+  const handleTimeLogged = () => {
     fetchProjects(); // Refresh projects list (to potentially update time summary)
     setShowLogTimeModal(false);
     setLoggingProject(null);
@@ -135,6 +171,21 @@ export default function ProjectsPage() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-slate-400 capitalize">Status: {project.status}</p>
+                                {/* Display total time */}
+                                {project.total_time_minutes > 0 && (
+                                    <p className="text-xs text-slate-500 mt-2">
+                                        Total Time: {formatDistanceToNowStrict(0, { unit: 'minute', addSuffix: false, roundingMethod: 'ceil', locale: {
+                                            formatDistance: (token, count) => {
+                                                if (token === 'xMinutes') return `${count}min`;
+                                                if (token === 'xHours') return `${count}h`;
+                                                if (token === 'xDays') return `${count}d`;
+                                                if (token === 'xMonths') return `${count}m`;
+                                                if (token === 'xYears') return `${count}y`;
+                                                return `${count}${token}`;
+                                            }
+                                        }} as any).replace(' minutes', 'm').replace(' hours', 'h').replace(' days', 'd')}
+                                    </p>
+                                )}
                                 <div className="mt-4 flex gap-3">
                                     {project.github_url && (
                                         <Link href={project.github_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm">
@@ -165,7 +216,7 @@ export default function ProjectsPage() {
           onUpdated={handleProjectUpdated}
         />
       )}
-      {loggingProject && ( // New modal integration
+      {loggingProject && (
         <LogTimeModal
           project={loggingProject}
           open={showLogTimeModal}
