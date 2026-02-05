@@ -1,10 +1,15 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import { Idea } from '@/types/database';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { toast } from 'sonner';
 
 interface IdeaDetailPageProps {
   params: {
@@ -12,26 +17,82 @@ interface IdeaDetailPageProps {
   };
 }
 
-export default async function IdeaDetailPage({ params }: IdeaDetailPageProps) {
+export default function IdeaDetailPage({ params }: IdeaDetailPageProps) {
   const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const [idea, setIdea] = useState<Idea | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [impact, setImpact] = useState<number[]>(idea?.impact_score ? [idea.impact_score] : [5]);
+  const [effort, setEffort] = useState<number[]>(idea?.effort_score ? [idea.effort_score] : [5]);
+  const [excitement, setExcitement] = useState<number[]>(idea?.excitement_score ? [idea.excitement_score] : [5]);
 
-  if (!session) {
-    notFound(); // Or redirect to login, depending on desired behavior for unauthenticated access
-  }
+  const fetchIdea = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('ideas')
+      .select('*')
+      .eq('id', params.id)
+      .single();
 
-  const { data: idea, error } = await supabase
-    .from('ideas')
-    .select('*')
-    .eq('id', params.id)
-    .single();
+    if (error || !data) {
+      console.error('Error fetching idea:', error);
+      notFound();
+    }
+    setIdea(data);
+    setImpact([data.impact_score || 5]);
+    setEffort([data.effort_score || 5]);
+    setExcitement([data.excitement_score || 5]);
+    setLoading(false);
+  }, [params.id, supabase]);
 
-  if (error || !idea) {
-    console.error('Error fetching idea:', error);
-    notFound();
-  }
+  useEffect(() => {
+    fetchIdea();
+  }, [fetchIdea]);
+
+  const debounce = (func: Function, delay: number) => {
+    let timeout: NodeJS.Timeout;
+    return (...args: any[]) => {
+      clearTimeout(timeout);
+      timeout = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  const updateIdeaScores = useCallback(
+    debounce(async (updatedScores: { impact_score?: number; effort_score?: number; excitement_score?: number }) => {
+      if (!idea) return;
+      const { error } = await supabase
+        .from('ideas')
+        .update({ ...updatedScores, updated_at: new Date().toISOString() })
+        .eq('id', idea.id);
+
+      if (error) {
+        toast.error('Failed to update scores.');
+        console.error('Update scores error:', error);
+      } else {
+        toast.success('Scores updated! 🎉');
+        // Re-fetch the idea to get the new calculated priority_score
+        fetchIdea(); 
+      }
+    }, 500),
+    [idea, supabase, fetchIdea]
+  );
+
+  const handleScoreChange = (scoreType: 'impact_score' | 'effort_score' | 'excitement_score', value: number[]) => {
+    const score = value[0];
+    if (!idea) return;
+
+    let updatedScores: { impact_score?: number; effort_score?: number; excitement_score?: number } = {};
+    if (scoreType === 'impact_score') {
+      setImpact(value);
+      updatedScores.impact_score = score;
+    } else if (scoreType === 'effort_score') {
+      setEffort(value);
+      updatedScores.effort_score = score;
+    } else {
+      setExcitement(value);
+      updatedScores.excitement_score = score;
+    }
+    updateIdeaScores(updatedScores);
+  };
 
   const priorityColor = (score: number | null) => {
     if (score === null) return 'bg-slate-600';
@@ -39,6 +100,18 @@ export default async function IdeaDetailPage({ params }: IdeaDetailPageProps) {
     if (score > 10) return 'bg-yellow-500';
     return 'bg-green-500';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <p>Loading idea details...</p>
+      </div>
+    );
+  }
+
+  if (!idea) {
+    return notFound();
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-6 lg:p-8">
@@ -60,22 +133,66 @@ export default async function IdeaDetailPage({ params }: IdeaDetailPageProps) {
               {idea.category} • {idea.status}
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <h3 className="text-lg font-semibold text-white">Description:</h3>
-            <p className="text-slate-300 whitespace-pre-wrap">{idea.description || 'No description provided.'}</p>
+          <CardContent className="space-y-6">
+            <div>
+                <h3 className="text-lg font-semibold text-white mb-2">Description:</h3>
+                <p className="text-slate-300 whitespace-pre-wrap">{idea.description || 'No description provided.'}</p>
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div>
-                    <span className="font-semibold text-slate-400">Impact: </span>
-                    <span className="text-white">{idea.impact_score ?? 'N/A'}</span>
-                </div>
-                <div>
-                    <span className="font-semibold text-slate-400">Effort: </span>
-                    <span className="text-white">{idea.effort_score ?? 'N/A'}</span>
-                </div>
-                <div>
-                    <span className="font-semibold text-slate-400">Excitement: </span>
-                    <span className="text-white">{idea.excitement_score ?? 'N/A'}</span>
+            <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white mb-2">Validate Your Idea:</h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                        <label htmlFor="impact-slider" className="text-base font-medium text-slate-300 flex justify-between items-center">
+                            Impact <Badge variant="secondary" className="bg-blue-500/20 text-blue-300">{impact[0]}</Badge>
+                        </label>
+                        <Slider
+                            id="impact-slider"
+                            min={1}
+                            max={10}
+                            step={1}
+                            value={impact}
+                            onValueChange={(val) => handleScoreChange('impact_score', val)}
+                            className="[&>span:first-child]:h-2 [&>span:first-child]:bg-blue-500 [&>span:first-child]:shadow-blue-500/50"
+                            thumbClassName="[&>span]:bg-blue-500 [&>span]:shadow-lg"
+                        />
+                        <p className="text-xs text-slate-500">How big is the potential positive outcome (1-10)?</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="effort-slider" className="text-base font-medium text-slate-300 flex justify-between items-center">
+                            Effort <Badge variant="secondary" className="bg-amber-500/20 text-amber-300">{effort[0]}</Badge>
+                        </label>
+                        <Slider
+                            id="effort-slider"
+                            min={1}
+                            max={10}
+                            step={1}
+                            value={effort}
+                            onValueChange={(val) => handleScoreChange('effort_score', val)}
+                            className="[&>span:first-child]:h-2 [&>span:first-child]:bg-amber-500 [&>span:first-child]:shadow-amber-500/50"
+                            thumbClassName="[&>span]:bg-amber-500 [&>span]:shadow-lg"
+                        />
+                        <p className="text-xs text-slate-500">How much work is required (1-10)?</p>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label htmlFor="excitement-slider" className="text-base font-medium text-slate-300 flex justify-between items-center">
+                            Excitement <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-300">{excitement[0]}</Badge>
+                        </label>
+                        <Slider
+                            id="excitement-slider"
+                            min={1}
+                            max={10}
+                            step={1}
+                            value={excitement}
+                            onValueChange={(val) => handleScoreChange('excitement_score', val)}
+                            className="[&>span:first-child]:h-2 [&>span:first-child]:bg-emerald-500 [&>span:first-child]:shadow-emerald-500/50"
+                            thumbClassName="[&>span]:bg-emerald-500 [&>span]:shadow-lg"
+                        />
+                        <p className="text-xs text-slate-500">How excited are you to build this (1-10)?</p>
+                    </div>
                 </div>
             </div>
             
