@@ -4,6 +4,7 @@
   "private": true,
   // Environment Variables for Telegram Bot Integration:
   // TELEGRAM_BOT_TOKEN="YOUR_TELEGRAM_BOT_API_TOKEN"
+  // SUPABASE_SERVICE_ROLE_KEY="YOUR_SUPABASE_SERVICE_ROLE_KEY"
   "scripts": {
     "dev": "next dev",
     "build": "next build",
