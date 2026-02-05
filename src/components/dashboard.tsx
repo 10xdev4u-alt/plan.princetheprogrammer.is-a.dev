@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'; // Added this import
 import { createClient } from '@/lib/supabase/client'
 import { Idea } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -86,6 +87,11 @@ export function Dashboard({ user }: { user: User }) {
           </div>
           
           <div className="flex items-center gap-3">
+            <Link href="/projects">
+              <Button variant="outline" className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-300">
+                Projects
+              </Button>
+            </Link>
             <Button 
               onClick={() => setShowCreateModal(true)}
               className="bg-blue-500 hover:bg-blue-600 text-white"
