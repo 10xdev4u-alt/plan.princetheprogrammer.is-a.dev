@@ -53,6 +53,17 @@ export type ActivityLog = {
     user_id: string;
     idea_id: string;
     action: string;
-    metadata: any; // Using 'any' for jsonb is a safe starting point
+    metadata: any; // jsonb can be tricky, 'any' is a safe bet for now
     created_at: string;
+}
+
+export type TimeLog = {
+    id: string;
+    project_id: string;
+    user_id: string;
+    start_time: string; // ISO string
+    end_time: string | null; // ISO string, nullable
+    description: string | null;
+    created_at: string;
+    updated_at: string;
 }
