@@ -4,15 +4,17 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Plus } from 'lucide-react'; // Added Plus icon
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Milestone } from '@/types/database';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button'; // Added Button import
 
 import { DndContext, DragOverlay, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
-import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'; // Added verticalListSortingStrategy
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { KanbanColumn } from '@/components/kanban-column';
-import { DraggableMilestoneCard } from '@/components/draggable-milestone-card'; // New import
+import { DraggableMilestoneCard } from '@/components/draggable-milestone-card';
+import { CreateMilestoneModal } from '@/components/create-milestone-modal'; // New import for modal
 
 interface IdeaRoadmapPageProps {
   params: {
@@ -24,6 +26,7 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
   const supabase = createClient();
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false); // State for modal visibility
 
   const fetchMilestones = useCallback(async () => {
     setLoading(true);
@@ -36,7 +39,6 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
     if (error) {
       console.error('Error fetching milestones:', error);
       toast.error('Failed to load milestones.');
-      // Optionally, redirect or show an error message
     } else {
       setMilestones(data || []);
     }
@@ -52,10 +54,6 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
       PointerSensor,
     )
   );
-
-  const handleDragStart = (event: any) => {
-    console.log('Drag started', event);
-  };
 
   const updateMilestoneInDB = useCallback(async (milestoneId: string, updates: { status?: string; order_index?: number }) => {
     const { error } = await supabase
@@ -114,10 +112,6 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
     );
   }
 
-  // If no milestones and not loading, we assume the idea might be invalid or there are no milestones yet.
-  // For now, if no milestones, we just show an empty state. If idea_id is invalid, Supabase query would error.
-  // This check is now integrated into the column rendering.
-
   return (
     <DndContext 
       sensors={sensors}
@@ -134,7 +128,16 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
 
           <Card className="bg-slate-800/50 border-slate-700">
             <CardHeader>
-              <CardTitle className="text-3xl font-bold text-white">Roadmap for Idea {params.id}</CardTitle>
+              <div className="flex justify-between items-center"> {/* Changed items-start to items-center */}
+                <CardTitle className="text-3xl font-bold text-white">Roadmap for Idea {params.id}</CardTitle>
+                <Button 
+                  onClick={() => setShowCreateModal(true)} 
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Milestone
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex space-x-4 overflow-x-auto py-4">
@@ -160,6 +163,12 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
         </div>
       </div>
       <DragOverlay>{/* We'll render the draggable item here later */}</DragOverlay>
+      <CreateMilestoneModal // New modal component
+        ideaId={params.id}
+        open={showCreateModal} 
+        onClose={() => setShowCreateModal(false)}
+        onCreated={fetchMilestones}
+      />
     </DndContext>
   );
 }
