@@ -101,6 +101,14 @@ export default function IdeaDetailPage({ params }: IdeaDetailPageProps) {
     return 'bg-green-500';
   };
 
+  const validationQuestions = [
+    "Does this idea solve a real problem?",
+    "Do I have the necessary skills or resources to build this?",
+    "Is there a target audience for this idea?",
+    "Can this idea be broken down into smaller, manageable milestones?",
+    "Am I truly excited to work on this for an extended period?"
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
@@ -194,6 +202,19 @@ export default function IdeaDetailPage({ params }: IdeaDetailPageProps) {
                         <p className="text-xs text-slate-500">How excited are you to build this (1-10)?</p>
                     </div>
                 </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-2">Validation Checklist:</h3>
+                <div className="space-y-2">
+                    {validationQuestions.map((question, index) => (
+                        <div key={index} className="flex items-center space-x-2 text-slate-300">
+                            <input type="checkbox" id={`question-${index}`} className="form-checkbox h-4 w-4 text-blue-500 bg-slate-700 border-slate-600 rounded" />
+                            <label htmlFor={`question-${index}`} className="text-sm cursor-pointer">{question}</label>
+                        </div>
+                    ))}
+                </div>
+                <p className="text-xs text-slate-500">Use this checklist to thoroughly evaluate your idea.</p>
             </div>
             
             <p className="text-sm text-slate-500 mt-4">
