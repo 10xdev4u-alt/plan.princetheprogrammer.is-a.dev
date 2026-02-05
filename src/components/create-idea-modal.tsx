@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Input } from './ui/input';
@@ -9,12 +9,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 
-export function CreateIdeaModal({ open, onClose, onCreated }: { open: boolean, onClose: () => void, onCreated: () => void }) {
+interface CreateIdeaModalProps {
+  open: boolean
+  onClose: () => void
+  onCreated: () => void
+  defaultDescription?: string // New prop
+}
+
+export function CreateIdeaModal({ open, onClose, onCreated, defaultDescription = '' }: CreateIdeaModalProps) { // Default value for new prop
     const [title, setTitle] = useState('');
-    const [description, setDescription] = useState('');
+    const [description, setDescription] = useState(defaultDescription); // Initialize with defaultDescription
     const [category, setCategory] = useState<'tech' | 'business' | 'content' | 'life' | 'random'>('tech');
     const [loading, setLoading] = useState(false);
     const supabase = createClient();
+
+    useEffect(() => {
+        // Update description state if defaultDescription changes (e.g., when modal is reused)
+        if (open) { // Only update when modal opens or defaultDescription changes while open
+          setDescription(defaultDescription);
+        }
+    }, [defaultDescription, open]); // Depend on defaultDescription and open
 
     const handleSubmit = async () => {
         if (!title) {
@@ -51,7 +65,7 @@ export function CreateIdeaModal({ open, onClose, onCreated }: { open: boolean, o
             console.error('Create idea error:', error);
         } else {
             toast.success('Idea captured! 🚀');
-            onCreated();
+            onCreated(); // Trigger refresh of ideas in parent component
             handleClose();
         }
     }
