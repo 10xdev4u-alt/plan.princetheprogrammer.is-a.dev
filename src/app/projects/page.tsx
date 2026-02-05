@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle, Timer } from 'lucide-react'; // Added Timer icon
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Project } from '@/types/database';
 import { EditProjectModal } from '@/components/edit-project-modal';
-import { Button } from '@/components/ui/button'; // Need Button for the edit button
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { LogTimeModal } from '@/components/log-time-modal'; // New import for modal
 
 
 export default function ProjectsPage() {
@@ -18,6 +19,8 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [showLogTimeModal, setShowLogTimeModal] = useState(false); // New state for log time modal
+  const [loggingProject, setLoggingProject] = useState<Project | null>(null); // New state for project to log time for
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -51,10 +54,21 @@ export default function ProjectsPage() {
     setShowEditModal(true);
   };
 
+  const handleLogTimeClick = (project: Project) => { // New handler for log time button
+    setLoggingProject(project);
+    setShowLogTimeModal(true);
+  };
+
   const handleProjectUpdated = () => {
     fetchProjects(); // Refresh projects list
     setShowEditModal(false);
     setEditingProject(null);
+  };
+
+  const handleTimeLogged = () => { // New handler for time logged
+    fetchProjects(); // Refresh projects list (to potentially update time summary)
+    setShowLogTimeModal(false);
+    setLoggingProject(null);
   };
 
   const handleShipProject = async (projectId: string) => {
@@ -105,9 +119,14 @@ export default function ProjectsPage() {
                                 <CardTitle className="text-xl">{project.name}</CardTitle>
                                 <div className="flex items-center gap-2">
                                     {project.status === 'active' && (
-                                        <Button variant="ghost" size="icon" onClick={() => handleShipProject(project.id)} className="text-green-500 hover:text-green-400">
-                                            <CheckCircle className="w-4 h-4" />
-                                        </Button>
+                                        <>
+                                            <Button variant="ghost" size="icon" onClick={() => handleLogTimeClick(project)} className="text-blue-500 hover:text-blue-400">
+                                                <Timer className="w-4 h-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleShipProject(project.id)} className="text-green-500 hover:text-green-400">
+                                                <CheckCircle className="w-4 h-4" />
+                                            </Button>
+                                        </>
                                     )}
                                     <Button variant="ghost" size="icon" onClick={() => handleEditClick(project)}>
                                         <Edit className="w-4 h-4" />
@@ -144,6 +163,14 @@ export default function ProjectsPage() {
           open={showEditModal}
           onClose={() => setShowEditModal(false)}
           onUpdated={handleProjectUpdated}
+        />
+      )}
+      {loggingProject && ( // New modal integration
+        <LogTimeModal
+          project={loggingProject}
+          open={showLogTimeModal}
+          onClose={() => setShowLogTimeModal(false)}
+          onTimeLogged={handleTimeLogged}
         />
       )}
     </div>
