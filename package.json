@@ -2,6 +2,8 @@
   "name": "plan",
   "version": "0.1.0",
   "private": true,
+  // Environment Variables for Telegram Bot Integration:
+  // TELEGRAM_BOT_TOKEN="YOUR_TELEGRAM_BOT_API_TOKEN"
   "scripts": {
     "dev": "next dev",
     "build": "next build",
