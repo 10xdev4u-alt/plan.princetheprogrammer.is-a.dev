@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createClient } from '@supabase/supabase-js' // Import createClient from supabase-js
 
 export const createClient = () => {
   const cookieStore = cookies()
@@ -34,3 +35,15 @@ export const createClient = () => {
     }
   )
 }
+
+export const createServiceRoleClient = () => {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Use service role key
+    {
+      auth: {
+        persistSession: false, // No session persistence for service role client
+      },
+    }
+  );
+};
