@@ -4,12 +4,14 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { DndContext, DragOverlay, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
-import { SortableContext, arrayMove } from '@dnd-kit/sortable'; // Will use these later for sorting
 import { ChevronLeft } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Milestone } from '@/types/database';
 import { toast } from 'sonner';
+
+import { DndContext, DragOverlay, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'; // Added verticalListSortingStrategy
+import { KanbanColumn } from '@/components/kanban-column'; // New import
 
 interface IdeaRoadmapPageProps {
   params: {
@@ -44,21 +46,6 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
     fetchMilestones();
   }, [fetchMilestones]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
-        <p>Loading roadmap...</p>
-      </div>
-    );
-  }
-
-  // If no milestones and not loading, we assume the idea might be invalid or there are no milestones yet.
-  // For now, if no milestones, we just show an empty state. If idea_id is invalid, Supabase query would error.
-  if (!milestones && !loading) {
-    // This case might only happen if fetchMilestones sets milestones to null which it doesn't.
-    // So, we can just handle milestones.length === 0 below.
-  }
-
   const sensors = useSensors(
     useSensors(
       PointerSensor,
@@ -72,6 +59,25 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
   const handleDragEnd = (event: any) => {
     console.log('Drag ended', event);
   };
+
+  const milestoneStatuses = [
+    { id: 'pending', title: 'Pending' },
+    { id: 'in_progress', title: 'In Progress' },
+    { id: 'completed', title: 'Completed' },
+    { id: 'blocked', title: 'Blocked' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <p>Loading roadmap...</p>
+      </div>
+    );
+  }
+
+  // If no milestones and not loading, we assume the idea might be invalid or there are no milestones yet.
+  // For now, if no milestones, we just show an empty state. If idea_id is invalid, Supabase query would error.
+  // This check is now integrated into the column rendering.
 
   return (
     <DndContext 
@@ -92,18 +98,26 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
               <CardTitle className="text-3xl font-bold text-white">Roadmap for Idea {params.id}</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-slate-300">Milestones will appear here in a Kanban board layout.</p>
-              {milestones.length === 0 ? (
-                  <p className="text-slate-500 mt-4">No milestones yet. Time to plan!</p>
-              ) : (
-                  <div className="mt-4">
-                      {milestones.map((milestone) => (
-                          <div key={milestone.id} className="p-2 border-b border-slate-700">
-                              {milestone.title} - {milestone.status}
-                          </div>
-                      ))}
-                  </div>
-              )}
+              <div className="flex space-x-4 overflow-x-auto py-4">
+                {milestoneStatuses.map((column) => (
+                  <KanbanColumn
+                    key={column.id}
+                    id={column.id}
+                    title={column.title}
+                    milestones={milestones.filter(m => m.status === column.id)}
+                  >
+                    {/* Draggable Milestone cards will go here */}
+                    {milestones
+                      .filter(m => m.status === column.id)
+                      .map(milestone => (
+                        <div key={milestone.id} className="p-3 bg-slate-700 rounded-md text-sm border border-slate-600">
+                          {milestone.title}
+                        </div>
+                      ))
+                    }
+                  </KanbanColumn>
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>
