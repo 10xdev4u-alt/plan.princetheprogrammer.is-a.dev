@@ -1,9 +1,13 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Milestone } from '@/types/database';
+import { toast } from 'sonner';
 
 interface IdeaRoadmapPageProps {
   params: {
@@ -11,25 +15,46 @@ interface IdeaRoadmapPageProps {
   };
 }
 
-export default async function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
+export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
   const supabase = createClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  if (!session) {
-    notFound(); // Redirect to login if not authenticated
+  const fetchMilestones = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('milestones')
+      .select('*')
+      .eq('idea_id', params.id)
+      .order('order_index', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching milestones:', error);
+      toast.error('Failed to load milestones.');
+      // Optionally, redirect or show an error message
+    } else {
+      setMilestones(data || []);
+    }
+    setLoading(false);
+  }, [params.id, supabase]);
+
+  useEffect(() => {
+    fetchMilestones();
+  }, [fetchMilestones]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+        <p>Loading roadmap...</p>
+      </div>
+    );
   }
 
-  // Placeholder to fetch milestones, will implement actual DND later
-  const { data: milestones, error } = await supabase
-    .from('milestones')
-    .select('*')
-    .eq('idea_id', params.id)
-    .order('order_index', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching milestones:', error);
-    // Handle error appropriately
-    return notFound();
+  // If no milestones and not loading, we assume the idea might be invalid or there are no milestones yet.
+  // For now, if no milestones, we just show an empty state. If idea_id is invalid, Supabase query would error.
+  if (!milestones && !loading) {
+    // This case might only happen if fetchMilestones sets milestones to null which it doesn't.
+    // So, we can just handle milestones.length === 0 below.
   }
 
   return (
