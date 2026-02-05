@@ -5,11 +5,11 @@ import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import { Idea } from '@/types/database';
 import Link from 'next/link';
-import { ChevronLeft, Sparkles, Lightbulb, HelpCircle, BatteryLow } from 'lucide-react'; // Consolidated lucide-react imports
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { ChevronLeft, Sparkles, Lightbulb, HelpCircle, BatteryLow, Rocket } from 'lucide-react'; // Added Rocket icon
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { Button } from '@/components/ui/button'; // Added Button import
+import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 interface IdeaDetailPageProps {
@@ -95,6 +95,42 @@ export default function IdeaDetailPage({ params }: IdeaDetailPageProps) {
     updateIdeaScores(updatedScores);
   };
 
+  const handleConvertToProject = async () => {
+    if (!idea) return;
+    
+    // Create slug from title
+    const slug = idea.title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+
+    const { data: project, error } = await supabase
+        .from('projects')
+        .insert({
+            idea_id: idea.id,
+            name: idea.title,
+            slug: slug,
+            user_id: idea.user_id,
+        });
+
+    if (error) {
+      toast.error('Failed to convert to project.');
+      console.error('Convert to project error:', error);
+    } else {
+      // Now update the idea's status
+      const { error: ideaError } = await supabase
+          .from('ideas')
+          .update({ status: 'building' })
+          .eq('id', idea.id);
+
+      if (ideaError) {
+          toast.error('Failed to update idea status.');
+          console.error('Update idea status error:', ideaError);
+          // TODO: Handle rollback of project creation if this fails
+      } else {
+          toast.success('Converted to project! 🚀');
+          fetchIdea(); // Refresh the page to show new status
+      }
+    }
+  };
+
   const priorityColor = (score: number | null) => {
     if (score === null) return 'bg-slate-600';
     if (score > 15) return 'bg-red-500';
@@ -178,6 +214,12 @@ export default function IdeaDetailPage({ params }: IdeaDetailPageProps) {
                     Roadmap
                   </Button>
                 </Link>
+                {idea.status === 'validated' && (
+                  <Button variant="outline" size="sm" className="bg-green-500 hover:bg-green-600 border-green-600 text-white" onClick={handleConvertToProject}>
+                    <Rocket className="w-4 h-4 mr-2" />
+                    Convert to Project
+                  </Button>
+                )}
               </div>
             </div>
             <CardDescription className="text-slate-400 capitalize">
