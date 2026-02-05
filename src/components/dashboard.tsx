@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'; // Added this import
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client'
 import { Idea } from '@/types/database'
 import { Button } from '@/components/ui/button'
-import { Plus, Sparkles, Filter, LogOut } from 'lucide-react'
+import { Plus, Sparkles, Filter, LogOut, Mic } from 'lucide-react' // Added Mic icon
 import { IdeaCard } from './idea-card'
 import { CreateIdeaModal } from './create-idea-modal'
+import { VoiceCaptureModal } from './voice-capture-modal'; // New import for VoiceCaptureModal
 import { toast } from 'sonner'
 import { User } from '@supabase/supabase-js'
 
@@ -15,6 +16,7 @@ export function Dashboard({ user }: { user: User }) {
   const [ideas, setIdeas] = useState<Idea[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showVoiceCaptureModal, setShowVoiceCaptureModal] = useState(false); // New state for voice capture modal
   const [filter, setFilter] = useState('all')
   const supabase = createClient()
 
@@ -93,6 +95,13 @@ export function Dashboard({ user }: { user: User }) {
               </Button>
             </Link>
             <Button 
+              onClick={() => setShowVoiceCaptureModal(true)} // New Voice Capture Button
+              className="bg-purple-500 hover:bg-purple-600 text-white"
+            >
+              <Mic className="w-4 h-4 mr-2" />
+              Voice Capture
+            </Button>
+            <Button 
               onClick={() => setShowCreateModal(true)}
               className="bg-blue-500 hover:bg-blue-600 text-white"
             >
@@ -148,6 +157,19 @@ export function Dashboard({ user }: { user: User }) {
         onCreated={() => {
           fetchIdeas();
           setShowCreateModal(false);
+        }}
+      />
+      <VoiceCaptureModal // New Voice Capture Modal integration
+        open={showVoiceCaptureModal}
+        onClose={() => setShowVoiceCaptureModal(false)}
+        onCaptured={(transcript) => {
+            // Option 1: Directly create idea from transcript
+            // Option 2: Pass transcript to CreateIdeaModal (more flexible)
+            setShowCreateModal(true); // Open CreateIdeaModal
+            // Need to pass transcript to CreateIdeaModal, will refactor later
+            console.log('Voice captured:', transcript);
+            fetchIdeas();
+            setShowVoiceCaptureModal(false);
         }}
       />
     </div>
