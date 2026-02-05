@@ -11,7 +11,8 @@ import { toast } from 'sonner';
 
 import { DndContext, DragOverlay, useSensors, PointerSensor, closestCorners } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable'; // Added verticalListSortingStrategy
-import { KanbanColumn } from '@/components/kanban-column'; // New import
+import { KanbanColumn } from '@/components/kanban-column';
+import { DraggableMilestoneCard } from '@/components/draggable-milestone-card'; // New import
 
 interface IdeaRoadmapPageProps {
   params: {
@@ -110,9 +111,7 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
                     {milestones
                       .filter(m => m.status === column.id)
                       .map(milestone => (
-                        <div key={milestone.id} className="p-3 bg-slate-700 rounded-md text-sm border border-slate-600">
-                          {milestone.title}
-                        </div>
+                        <DraggableMilestoneCard key={milestone.id} milestone={milestone} />
                       ))
                     }
                   </KanbanColumn>
