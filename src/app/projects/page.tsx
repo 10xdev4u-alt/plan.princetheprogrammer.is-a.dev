@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Github } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Project } from '@/types/database';
 
@@ -49,9 +49,19 @@ export default async function ProjectsPage() {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-slate-400 capitalize">Status: {project.status}</p>
-                                <div className="mt-4 flex gap-2">
-                                    {project.github_url && <a href={project.github_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm">GitHub</a>}
-                                    {project.live_url && <a href={project.live_url} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline text-sm">Live URL</a>}
+                                <div className="mt-4 flex gap-3">
+                                    {project.github_url && (
+                                        <Link href={project.github_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm">
+                                            <Github className="w-4 h-4" />
+                                            GitHub
+                                        </Link>
+                                    )}
+                                    {project.live_url && (
+                                        <Link href={project.live_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-sm">
+                                            <ExternalLink className="w-4 h-4" />
+                                            Live
+                                        </Link>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
