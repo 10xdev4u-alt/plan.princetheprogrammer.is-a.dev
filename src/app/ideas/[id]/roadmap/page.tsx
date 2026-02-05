@@ -57,8 +57,46 @@ export default function IdeaRoadmapPage({ params }: IdeaRoadmapPageProps) {
     console.log('Drag started', event);
   };
 
-  const handleDragEnd = (event: any) => {
-    console.log('Drag ended', event);
+  const updateMilestoneInDB = useCallback(async (milestoneId: string, updates: { status?: string; order_index?: number }) => {
+    const { error } = await supabase
+      .from('milestones')
+      .update(updates)
+      .eq('id', milestoneId);
+
+    if (error) {
+      toast.error('Failed to update milestone.');
+      console.error('Update milestone error:', error);
+      fetchMilestones(); // Re-fetch to revert optimistic update if error
+      return false;
+    }
+    toast.success('Milestone updated! 🎉');
+    return true;
+  }, [supabase, fetchMilestones]);
+
+  const handleDragEnd = async (event: any) => {
+    const { active, over } = event;
+
+    if (!active || !over) return;
+
+    const activeMilestoneId = active.id;
+    const newStatusId = over.id as Milestone['status']; // The column ID is the new status
+
+    // Find the milestone being dragged
+    const draggedMilestone = milestones.find(m => m.id === activeMilestoneId);
+    if (!draggedMilestone) return;
+
+    // If status hasn't changed, no need to update
+    if (draggedMilestone.status === newStatusId) return;
+
+    // Optimistically update UI
+    setMilestones(prevMilestones => {
+      return prevMilestones.map(m =>
+        m.id === draggedMilestone.id ? { ...m, status: newStatusId } : m
+      );
+    });
+
+    // Persist to DB
+    await updateMilestoneInDB(activeMilestoneId, { status: newStatusId });
   };
 
   const milestoneStatuses = [
