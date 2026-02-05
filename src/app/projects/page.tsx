@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle } from 'lucide-react'; // Added CheckCircle icon
+import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Project } from '@/types/database';
 import { EditProjectModal } from '@/components/edit-project-modal';
@@ -70,10 +70,9 @@ export default function ProjectsPage() {
     } else {
       toast.success('Project shipped! 🎉');
       fetchProjects(); // Refresh list
-      // Trigger celebration animation here later
+      // TODO: Trigger celebration animation here! 🚀
     }
   };
-
 
   if (loading) {
     return (
