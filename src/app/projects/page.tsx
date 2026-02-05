@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ExternalLink, Github, Edit } from 'lucide-react';
+import { ChevronLeft, ExternalLink, Github, Edit, CheckCircle } from 'lucide-react'; // Added CheckCircle icon
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Project } from '@/types/database';
 import { EditProjectModal } from '@/components/edit-project-modal';
@@ -57,6 +57,24 @@ export default function ProjectsPage() {
     setEditingProject(null);
   };
 
+  const handleShipProject = async (projectId: string) => {
+    // Confirmation dialog could be added here
+    const { error } = await supabase
+      .from('projects')
+      .update({ status: 'completed' })
+      .eq('id', projectId);
+
+    if (error) {
+      toast.error('Failed to ship project.');
+      console.error('Ship project error:', error);
+    } else {
+      toast.success('Project shipped! 🎉');
+      fetchProjects(); // Refresh list
+      // Trigger celebration animation here later
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
@@ -84,11 +102,18 @@ export default function ProjectsPage() {
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {projects.map((project) => (
                         <Card key={project.id} className="bg-slate-700/50 border-slate-600">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2"> {/* Modified for flex layout */}
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-xl">{project.name}</CardTitle>
-                                <Button variant="ghost" size="icon" onClick={() => handleEditClick(project)}>
-                                    <Edit className="w-4 h-4" />
-                                </Button>
+                                <div className="flex items-center gap-2">
+                                    {project.status === 'active' && (
+                                        <Button variant="ghost" size="icon" onClick={() => handleShipProject(project.id)} className="text-green-500 hover:text-green-400">
+                                            <CheckCircle className="w-4 h-4" />
+                                        </Button>
+                                    )}
+                                    <Button variant="ghost" size="icon" onClick={() => handleEditClick(project)}>
+                                        <Edit className="w-4 h-4" />
+                                    </Button>
+                                </div>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-sm text-slate-400 capitalize">Status: {project.status}</p>
